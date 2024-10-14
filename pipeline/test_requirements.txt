@@ -1,6 +1,6 @@
 boto3
 requests
 pytest
+pyarrow
 black
 pylint
-pyarrow
