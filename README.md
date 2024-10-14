@@ -1,5 +1,3 @@
-# terraform-lambda-s3-ingestion
-
 ## Prerequisites
 
 Before using this project, ensure you have the following installed:
