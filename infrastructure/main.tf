@@ -1,6 +1,12 @@
 provider "aws" {
   region = var.region
+  default_tags {
+    tags = {
+      "Project" = "TODELETE-etl-pipeline-iac"
+    }
+  }
 }
+
 module "lambda_s3_ingestion" {
   source                       = "./modules/lambda_s3_ingestion"
   s3_lambda_layers_bucket      = "lambda-layers-data-ingestion"
@@ -24,5 +30,19 @@ module "glue_s3_transformation" {
   glue_schema_processing_script_name = "data_transformation.py"
   glue_script_source_path            = "/Users/raitaliyahia/Documents/aws-practice/etl-pipeline-iac/pipeline/data_transformation.py"
 
-  depends_on = [ module.lambda_s3_ingestion ]
+  depends_on = [module.lambda_s3_ingestion]
+}
+
+module "eventbridge_lambda" {
+  source               = "./modules/eventbridge_lambda_trigger"
+  lambda_function_name = "python_compare_hash_lambda"
+  lambda_file_path     = "lambda/data_compare_hash.zip"
+  iam_role             = module.lambda_s3_ingestion.lambda_role.arn
+  lambda_layer         = module.lambda_s3_ingestion.lambda_layer.arn
+  depends_on           = [module.lambda_s3_ingestion]
+}
+
+module "athena" {
+  source             = "./modules/athena"
+  athena_bucket_name = "athena-script-output-09072024"
 }

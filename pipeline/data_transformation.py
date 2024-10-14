@@ -33,7 +33,7 @@ ChangeSchema_node1728314130582 = ApplyMapping.apply(
         ("country", "string", "country", "string"), 
         ("code", "string", "code", "string"), 
         ("slug", "string", "slug", "string"), 
-        ("legislatures", "array", "legislatures", "array"), 
+        #("legislatures", "array", "legislatures", "array"), 
         ("partition_0", "string", "partition_0", "string"), 
         ("partition_1", "string", "partition_1", "string"), 
         ("partition_2", "string", "partition_2", "string")

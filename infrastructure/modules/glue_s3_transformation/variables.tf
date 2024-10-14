@@ -37,3 +37,9 @@ variable "glue_script_source_path" {
   description = "Local path of the Glue script to upload"
   type        = string
 }
+
+variable "glue_trigger_name" {
+  description = "Local path of the Glue script to upload"
+  type        = string 
+  default = "glue_trigger"
+}

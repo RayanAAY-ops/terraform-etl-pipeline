@@ -50,10 +50,10 @@ resource "aws_glue_catalog_database" "my_database" {
   name = "etl-pipeline-iac-my-catalog-db"
 }
 
-# Crawler
-resource "aws_glue_crawler" "etl_crawler" {
+# Input Crawler
+resource "aws_glue_crawler" "input-etl-crawler" {
   database_name = aws_glue_catalog_database.my_database.name
-  name          = "my-crawler-etl"
+  name          = "input-crawler-etl"
   role          = aws_iam_role.glue_role.arn
   classifiers   = [aws_glue_classifier.json_classifier.name]
   
@@ -82,12 +82,12 @@ resource "aws_s3_bucket" "s3_bucket_glue_output" {
 
 # Null Resource to wait for the Glue Crawler to finish
 resource "null_resource" "wait_for_crawler" {
-  depends_on = [aws_glue_crawler.etl_crawler]
+  depends_on = [aws_glue_crawler.input-etl-crawler]
 
   provisioner "local-exec" {
     command = <<EOT
       # Wait for the Glue Crawler to finish
-      CRAWLER_NAME=${aws_glue_crawler.etl_crawler.name}
+      CRAWLER_NAME=${aws_glue_crawler.input-etl-crawler.name}
       while true; do
         STATUS=$(aws glue get-crawler --name $CRAWLER_NAME --query 'Crawler.State' --output text)
         echo "Crawler state: $STATUS"
@@ -125,6 +125,10 @@ resource "aws_glue_job" "glue_data_transformation_job" {
     "--DEST_BCKET_NAME"      = aws_s3_bucket.s3_bucket_glue_output.bucket  # Set your table name
 
   }
+  
+  number_of_workers = 2  # Required for Python Shell jobs
+  worker_type = "G.1X"
+
   depends_on = [aws_s3_object.glue_script_object,
                 null_resource.wait_for_crawler,  # Wait for the crawler to finish
                 aws_glue_catalog_database.my_database,
@@ -137,3 +141,66 @@ resource "aws_glue_job" "glue_data_transformation_job" {
 }
 
 
+# Glue trigger
+resource "aws_glue_trigger" "glue_trigger_etl" {
+  name = var.glue_trigger_name
+  type = "CONDITIONAL"
+
+  actions {
+    job_name = aws_glue_job.glue_data_transformation_job.name
+  }
+
+  predicate {
+    conditions {
+      crawler_name = aws_glue_crawler.input-etl-crawler.name
+      crawl_state = "SUCCEEDED"
+
+    }
+  }
+  start_on_creation = true
+
+  depends_on = [ aws_glue_job.glue_data_transformation_job ]
+}
+
+# Null Resource to wait for the Glue Job to finish
+resource "null_resource" "wait_for_glue_job" {
+  provisioner "local-exec" {
+    command = <<EOT
+      JOB_NAME="schema_processing"
+      while true; do
+        # Get the job run state
+        STATUS=$(aws glue get-job-runs --job-name $JOB_NAME --query 'JobRuns[0].JobRunState' --output text)
+
+        echo "Current job state: $STATUS"
+
+        # Check if the job has finished
+        if [[ "$STATUS" == "SUCCEEDED" || "$STATUS" == "FAILED" || "$STATUS" == "STOPPED" ]]; then
+          echo "Job has finished with state: $STATUS"
+          break
+        fi
+
+        # Wait for 10 seconds before checking again
+        sleep 10
+      done
+    EOT
+  }
+
+  depends_on = [aws_glue_job.glue_data_transformation_job]  # Ensure this runs after your Glue job
+}
+
+# Output Crawler to crawl the output table and add it to the Glue Catalog
+resource "aws_glue_crawler" "output-etl-crawler" {
+  database_name = aws_glue_catalog_database.my_database.name
+  name          = "output-crawler-etl"
+  role          = aws_iam_role.glue_role.arn
+  
+  s3_target {
+    path = "s3://${aws_s3_bucket.s3_bucket_glue_output.bucket}"
+  }
+
+  provisioner "local-exec" {
+    command = "aws glue start-crawler --name ${self.name}"
+  }
+  depends_on = [null_resource.wait_for_glue_job]
+
+}

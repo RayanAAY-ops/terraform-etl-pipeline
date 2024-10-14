@@ -4,8 +4,9 @@ import boto3
 import requests
 from datetime import datetime 
 from botocore.exceptions import ClientError
-
+import hashlib
 DST_BUCKET = "etl-pipeline-iac-bucket-01072024"
+HASH_BUCKET = "bucket-hash-API"
 REGION = os.environ.get("AWS_DEFAULT_REGION")
 API_KEY = os.environ.get("API_KEY")
 URL = f"https://data.opensanctions.org/contrib/everypolitician/countries.json"
@@ -62,14 +63,25 @@ def create_s3_directories_based_on_city(
             pass
 
 
-#create_s3_directories_based_on_city(s3, city_name_list, database_name_s3="politicians", bucket_name=DST_BUCKET)
 
 def fetch_api_data(url):
 
     response = requests.get(url)#, headers=headers, params=query)
+    response = requests.get(url)#, headers=headers, params=query)
 
     if response.status_code == 200:
         data = json.loads(response.text)
+
+        metadata = {
+            'last_update': response.headers.get('Last-Modified'),  # Last modified date
+            'content_type': response.headers.get('Content-Type'),  # Content type
+            'content_length': response.headers.get('Content-Length'),  # Length of the content
+            'etag': response.headers.get('ETag')  # ETag for cache validation
+        }
+
+        hash_metadata = json.dumps(metadata, sort_keys=True)
+        os.environ['data_hash'] = hashlib.sha1(hash_metadata.encode('utf-8')).hexdigest()
+        print(os.environ.get('data_hash'))
         return data
     else:
         raise Exception(f"Error fetching data: {response.text}")
@@ -111,4 +123,3 @@ def populate_database_table_s3_bucket(
         print(f"Error populating table '{table_name}': {e}")
 
 
-populate_database_table_s3_bucket(s3, date=get_time()[1])

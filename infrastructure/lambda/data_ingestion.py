@@ -4,6 +4,7 @@ import boto3
 import requests
 from datetime import datetime 
 from botocore.exceptions import ClientError
+import hashlib
 
 DST_BUCKET = os.environ.get("BUCKET_NAME")
 REGION = os.environ.get("AWS_DEFAULT_REGION")
@@ -11,6 +12,7 @@ API_KEY = os.environ.get("API_KEY")
 URL = f"https://data.opensanctions.org/contrib/everypolitician/countries.json"
 
 s3 = boto3.client("s3", region_name=REGION)
+ssm = boto3.client('ssm', region_name=REGION)
 
 city_name_list = ["France", "Algeria", 'Spain']
 
@@ -70,6 +72,32 @@ def fetch_api_data(url):
 
     if response.status_code == 200:
         data = json.loads(response.text)
+        metadata = {
+            'last_update': response.headers.get('Last-Modified'),  # Last modified date
+            'content_type': response.headers.get('Content-Type'),  # Content type
+            'content_length': response.headers.get('Content-Length'),  # Length of the content
+            'etag': response.headers.get('ETag')  # ETag for cache validation
+        }
+
+        hash_metadata = json.dumps(metadata, sort_keys=True)
+        # Store hash in Parameter Store
+        parameter_name = '/myapp/data_hash'
+        ssm.put_parameter(
+            Name=parameter_name,
+            Value=hashlib.sha1(hash_metadata.encode('utf-8')).hexdigest(),
+            Type='String',
+            Overwrite=True  # Set to True to overwrite existing value
+        )
+        # Add tags to the parameter
+        ssm.add_tags_to_resource(
+            ResourceType='Parameter',
+            ResourceId=parameter_name,
+            Tags=[
+                {
+                    'Key': 'Project',
+                    'Value': 'TODELETE-etl-pipeline-iac'
+                },
+            ])
         return data
     else:
         raise Exception(f"Error fetching data: {response.text}")
