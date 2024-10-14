@@ -12,8 +12,8 @@ module "lambda_s3_ingestion" {
   s3_lambda_layers_bucket      = "lambda-layers-data-ingestion"
   s3_lambda_destination_bucket = "etl-pipeline-iac-bucket-09072024"
   lambda_function_name         = "python_ingestion_lambda"
-  lambda_file_path             = "lambda/lambda_ingestion.zip"
-  lambda_layer_file_path       = "${path.root}/lambda/lambda-layers/layer-data-ingestion.zip"
+  lambda_file_path             = "lambda-data/lambda_ingestion.zip"
+  lambda_layer_file_path       = "${path.root}/lambda-layers/layer-data-ingestion.zip"
 }
 
 
@@ -38,7 +38,7 @@ module "eventbridge_lambda" {
   source               = "./modules/eventbridge_lambda_trigger"
   cron_expression      = "cron(* 0 * * ? *)" # Every day
   lambda_function_name = "python_compare_hash_lambda"
-  lambda_file_path     = "lambda/data_compare_hash.zip"
+  lambda_file_path     = "lambda-data/data_compare_hash.zip"
   iam_role             = module.lambda_s3_ingestion.lambda_role.arn
   lambda_layer         = module.lambda_s3_ingestion.lambda_layer.arn
   depends_on           = [module.lambda_s3_ingestion]

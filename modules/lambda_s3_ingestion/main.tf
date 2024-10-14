@@ -30,8 +30,8 @@ resource "aws_iam_policy" "lambda_s3_access_policy" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/../../lambda/data_ingestion.py"
-  output_path = "${path.root}/lambda/lambda_ingestion.zip"
+  source_file = "${path.module}/../../pipeline/data_ingestion.py"
+  output_path = "${path.root}/lambda-data/lambda_ingestion.zip"
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_service_role_policy_attachment" {

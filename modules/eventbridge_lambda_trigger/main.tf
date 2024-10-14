@@ -1,8 +1,8 @@
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/../../lambda/data_compare_hash.py"
-  output_path = "${path.root}/lambda/data_compare_hash.zip"
+  source_file = "${path.root}/pipeline/data_compare_hash.py"
+  output_path = "${path.root}/lambda-data/data_compare_hash.zip"
 }
 
 resource "aws_lambda_function" "data_compare_hash" {

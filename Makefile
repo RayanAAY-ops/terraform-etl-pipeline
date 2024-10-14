@@ -8,14 +8,14 @@
 generate-lambda-layer: layer-data-ingestion.zip
 
 layer-data-ingestion.zip:
-	@mkdir -p lambda/lambda-layers/python/lib/python3.11/site-packages
-	@pip3.11 install -r lambda/requirements.txt --target lambda/lambda-layers/python/lib/python3.11/site-packages
-	@cd lambda/lambda-layers && zip -r9 layer-data-ingestion.zip .
-	@cd lambda/lambda-layers && rm -rf python
+	@mkdir -p lambda-layers/python/lib/python3.11/site-packages
+	@pip3.11 install -r pipeline/requirements.txt --target lambda-layers/python/lib/python3.11/site-packages
+	@cd lambda-layers && zip -r9 layer-data-ingestion.zip .
+	@cd lambda-layers && rm -rf python
 
 # Clean target to remove generated files
 clean:
-	@rm -rf lambda/lambda-layers
+	@rm -rf lambda-layers
 
 
 get-ressources-tags:

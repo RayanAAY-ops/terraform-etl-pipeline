@@ -5,13 +5,14 @@ import requests
 from datetime import datetime 
 from botocore.exceptions import ClientError
 import hashlib
-DST_BUCKET = "etl-pipeline-iac-bucket-01072024"
-HASH_BUCKET = "bucket-hash-API"
+
+DST_BUCKET = os.environ.get("BUCKET_NAME")
 REGION = os.environ.get("AWS_DEFAULT_REGION")
 API_KEY = os.environ.get("API_KEY")
 URL = f"https://data.opensanctions.org/contrib/everypolitician/countries.json"
 
 s3 = boto3.client("s3", region_name=REGION)
+ssm = boto3.client('ssm', region_name=REGION)
 
 city_name_list = ["France", "Algeria", 'Spain']
 
@@ -63,15 +64,14 @@ def create_s3_directories_based_on_city(
             pass
 
 
+#create_s3_directories_based_on_city(s3, city_name_list, database_name_s3="politicians", bucket_name=DST_BUCKET)
 
 def fetch_api_data(url):
 
     response = requests.get(url)#, headers=headers, params=query)
-    response = requests.get(url)#, headers=headers, params=query)
 
     if response.status_code == 200:
         data = json.loads(response.text)
-
         metadata = {
             'last_update': response.headers.get('Last-Modified'),  # Last modified date
             'content_type': response.headers.get('Content-Type'),  # Content type
@@ -80,8 +80,24 @@ def fetch_api_data(url):
         }
 
         hash_metadata = json.dumps(metadata, sort_keys=True)
-        os.environ['data_hash'] = hashlib.sha1(hash_metadata.encode('utf-8')).hexdigest()
-        print(os.environ.get('data_hash'))
+        # Store hash in Parameter Store
+        parameter_name = '/myapp/data_hash'
+        ssm.put_parameter(
+            Name=parameter_name,
+            Value=hashlib.sha1(hash_metadata.encode('utf-8')).hexdigest(),
+            Type='String',
+            Overwrite=True  # Set to True to overwrite existing value
+        )
+        # Add tags to the parameter
+        ssm.add_tags_to_resource(
+            ResourceType='Parameter',
+            ResourceId=parameter_name,
+            Tags=[
+                {
+                    'Key': 'Project',
+                    'Value': 'TODELETE-etl-pipeline-iac'
+                },
+            ])
         return data
     else:
         raise Exception(f"Error fetching data: {response.text}")
@@ -123,3 +139,4 @@ def populate_database_table_s3_bucket(
         print(f"Error populating table '{table_name}': {e}")
 
 
+populate_database_table_s3_bucket(s3, date=get_time()[1])
