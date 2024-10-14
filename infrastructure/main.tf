@@ -29,12 +29,14 @@ module "glue_s3_transformation" {
   glue_output_bucket                 = "glue-output-data-10102024"
   glue_schema_processing_script_name = "data_transformation.py"
   glue_script_source_path            = "/Users/raitaliyahia/Documents/aws-practice/etl-pipeline-iac/pipeline/data_transformation.py"
-
-  depends_on = [module.lambda_s3_ingestion]
+  glue_numbers_of_workers            = 2
+  glue_worker_type                   = "G.1X"
+  depends_on                         = [module.lambda_s3_ingestion]
 }
 
 module "eventbridge_lambda" {
   source               = "./modules/eventbridge_lambda_trigger"
+  cron_expression      = "cron(* 0 * * ? *)" # Every day
   lambda_function_name = "python_compare_hash_lambda"
   lambda_file_path     = "lambda/data_compare_hash.zip"
   iam_role             = module.lambda_s3_ingestion.lambda_role.arn

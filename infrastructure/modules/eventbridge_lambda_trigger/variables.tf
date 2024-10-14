@@ -18,3 +18,8 @@ variable "iam_role" {
   description = "IAM Role for Lambda"
   type        = string
 }
+
+variable "cron_expression" {
+  description = "Cron expression scheduling"
+  type = string
+}

@@ -43,3 +43,13 @@ variable "glue_trigger_name" {
   type        = string 
   default = "glue_trigger"
 }
+
+variable "glue_numbers_of_workers" {
+  description = "Glue number of workers"
+  type        = number 
+}
+
+variable "glue_worker_type" {
+   description = "Glue worker type"
+  type        = string  
+}

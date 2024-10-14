@@ -32,7 +32,7 @@ JSON
 resource "aws_cloudwatch_event_rule" "event_rule" {
   name        = "daily_lambda_event_rule"
   description = "Trigger target_lambda every day"
-  schedule_expression = "cron(* * * * ? *)"  # This cron expression triggers the event every day at midnight UTC
+  schedule_expression = var.cron_expression  # This cron expression triggers the event every day at midnight UTC
 }
 
 resource "aws_lambda_permission" "allow_event_rule" {
